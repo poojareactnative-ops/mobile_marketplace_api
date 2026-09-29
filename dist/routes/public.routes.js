@@ -1,0 +1,18 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const public_controller_1 = require("../controllers/public.controller");
+const validate_middleware_1 = require("../middleware/validate.middleware");
+const enquiry_schema_1 = require("../schemas/enquiry.schema");
+const shop_schema_1 = require("../schemas/shop.schema");
+const rateLimiter_middleware_1 = require("../middleware/rateLimiter.middleware");
+const router = (0, express_1.Router)();
+router.get('/public/landing-page', rateLimiter_middleware_1.publicApiLimiter, public_controller_1.PublicController.getLandingPage);
+router.get('/shops/nearby', rateLimiter_middleware_1.publicApiLimiter, (0, validate_middleware_1.validateQuery)(shop_schema_1.nearbyShopsQuerySchema), public_controller_1.PublicController.getNearbyShops);
+router.get('/products/featured', rateLimiter_middleware_1.publicApiLimiter, public_controller_1.PublicController.getFeaturedProducts);
+router.get('/categories', rateLimiter_middleware_1.publicApiLimiter, public_controller_1.PublicController.getCategories);
+router.get('/shops/:shopId', rateLimiter_middleware_1.publicApiLimiter, public_controller_1.PublicController.getShopById);
+router.get('/shops/:shopId/products', rateLimiter_middleware_1.publicApiLimiter, public_controller_1.PublicController.getShopProducts);
+router.post('/enquiries/whatsapp', rateLimiter_middleware_1.enquiryLimiter, (0, validate_middleware_1.validateBody)(enquiry_schema_1.whatsappEnquirySchema), public_controller_1.PublicController.createWhatsAppEnquiry);
+router.post('/analytics/track-visitor', rateLimiter_middleware_1.publicApiLimiter, (0, validate_middleware_1.validateBody)(enquiry_schema_1.trackVisitorSchema), public_controller_1.PublicController.trackVisitor);
+exports.default = router;

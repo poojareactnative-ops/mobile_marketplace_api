@@ -1,0 +1,18 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const repair_controller_1 = require("../controllers/repair.controller");
+const auth_middleware_1 = require("../middleware/auth.middleware");
+const validate_middleware_1 = require("../middleware/validate.middleware");
+const repair_schema_1 = require("../schemas/repair.schema");
+const enums_1 = require("../types/enums");
+const router = (0, express_1.Router)();
+const repairAuth = [auth_middleware_1.authenticate, (0, auth_middleware_1.requireRoles)(enums_1.UserRole.SUPER_SELLER, enums_1.UserRole.SELLER_ADMIN), auth_middleware_1.requireApproved];
+router.post('/seller/repair-customers', repairAuth, (0, validate_middleware_1.validateBody)(repair_schema_1.createRepairCustomerSchema), repair_controller_1.RepairController.createCustomer);
+router.get('/seller/repair-customers', repairAuth, repair_controller_1.RepairController.getCustomers);
+router.post('/seller/repair-jobs', repairAuth, (0, validate_middleware_1.validateBody)(repair_schema_1.createRepairJobSchema), repair_controller_1.RepairController.createRepairJob);
+router.get('/seller/repair-jobs', repairAuth, repair_controller_1.RepairController.getRepairJobs);
+router.get('/seller/repair-jobs/:jobId', repairAuth, repair_controller_1.RepairController.getRepairJobById);
+router.patch('/seller/repair-jobs/:jobId', repairAuth, (0, validate_middleware_1.validateBody)(repair_schema_1.updateRepairJobSchema), repair_controller_1.RepairController.updateRepairJob);
+router.post('/seller/repair-jobs/:jobId/updates', repairAuth, (0, validate_middleware_1.validateBody)(repair_schema_1.createRepairUpdateSchema), repair_controller_1.RepairController.addRepairUpdate);
+exports.default = router;
