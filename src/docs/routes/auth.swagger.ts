@@ -317,5 +317,133 @@ export const authSwagger = {
         }
       }
     }
+  },
+  "/auth/forgot-password": {
+    "post": {
+      "tags": [
+        "1. Authentication"
+      ],
+      "summary": "Forgot Password Request",
+      "description": "Generates a secure password reset token (valid for 15 minutes) for the registered email.",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "email"
+              ],
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "format": "email",
+                  "example": "admin@marketplace.com"
+                }
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Password reset token generated successfully.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "success": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "message": {
+                        "type": "string",
+                        "example": "Password reset token generated successfully. Valid for 15 minutes."
+                      },
+                      "resetToken": {
+                        "type": "string",
+                        "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Validation error (invalid email format)."
+        }
+      }
+    }
+  },
+  "/auth/reset-password": {
+    "post": {
+      "tags": [
+        "1. Authentication"
+      ],
+      "summary": "Reset Password with Token",
+      "description": "Verifies the reset token and updates the user's password.",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "token",
+                "newPassword"
+              ],
+              "properties": {
+                "token": {
+                  "type": "string",
+                  "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                },
+                "newPassword": {
+                  "type": "string",
+                  "minLength": 6,
+                  "example": "NewStrongPassword123!"
+                }
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Password reset successfully.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "success": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "message": {
+                        "type": "string",
+                        "example": "Password has been successfully reset. You can now log in with your new password."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Invalid or expired token, or invalid password format."
+        }
+      }
+    }
   }
 };
+

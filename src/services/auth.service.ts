@@ -1,8 +1,19 @@
 import { prisma } from '../config/prisma';
 import { hashPassword, comparePassword } from '../utils/hash';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+  generatePasswordResetToken,
+  verifyPasswordResetToken,
+} from '../utils/jwt';
 import { ApiError } from '../utils/apiError';
-import { RegisterSellerInput, LoginInput } from '../schemas/auth.schema';
+import {
+  RegisterSellerInput,
+  LoginInput,
+  ForgotPasswordInput,
+  ResetPasswordInput,
+} from '../schemas/auth.schema';
 import { UserRole, UserStatus, ApplicationStatus } from '../types/enums';
 import { ShopAdminStore } from '../utils/shopAdminStore';
 
@@ -235,5 +246,57 @@ export class AuthService {
       latestApplication: user.applications[0] || null,
     };
   }
+
+  static async forgotPassword(input: ForgotPasswordInput) {
+    const user = await prisma.user.findUnique({
+      where: { email: input.email },
+    });
+
+    if (!user) {
+      return {
+        message: 'If this email is registered, a password reset token has been generated.',
+        resetToken: null,
+      };
+    }
+
+    const resetToken = generatePasswordResetToken({
+      userId: user.id,
+      email: user.email,
+    });
+
+    return {
+      message: 'Password reset token generated successfully. Valid for 15 minutes.',
+      resetToken,
+    };
+  }
+
+  static async resetPassword(input: ResetPasswordInput) {
+    let payload;
+    try {
+      payload = verifyPasswordResetToken(input.token);
+    } catch (_err: any) {
+      throw ApiError.badRequest('Invalid or expired password reset token');
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+    });
+
+    if (!user || user.email !== payload.email) {
+      throw ApiError.notFound('User not found or token mismatch');
+    }
+
+    const passwordHash = await hashPassword(input.newPassword);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash },
+    });
+
+    return {
+      message: 'Password has been successfully reset. You can now log in with your new password.',
+    };
+  }
 }
+
 

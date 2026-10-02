@@ -71,6 +71,8 @@ Production-grade Node.js & TypeScript REST API service supporting the multi-tier
 | `POST` | `/api/v1/auth/register-super-seller` | Super Seller Onboarding Registration (Pending queue) | Public |
 | `POST` | `/api/v1/auth/login` | Login with Email & Password | Public |
 | `POST` | `/api/v1/auth/refresh` | Refresh Access Token | Public |
+| `POST` | `/api/v1/auth/forgot-password` | Request password reset token | Public |
+| `POST` | `/api/v1/auth/reset-password` | Reset password using token | Public |
 | `GET` | `/api/v1/auth/me` | Current Authenticated Profile & Shop | Bearer |
 | `POST` | `/api/v1/auth/logout` | Revoke session | Bearer |
 
