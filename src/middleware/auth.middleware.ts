@@ -29,7 +29,10 @@ export function requireRoles(...allowedRoles: UserRole[]) {
       return next(ApiError.unauthorized());
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    const effectiveRole = req.user.role === UserRole.SYSTEM_USER ? UserRole.SUPER_ADMIN : req.user.role;
+    const normalizedAllowed = allowedRoles.map((r) => (r === UserRole.SYSTEM_USER ? UserRole.SUPER_ADMIN : r));
+
+    if (!normalizedAllowed.includes(effectiveRole)) {
       return next(ApiError.forbidden(`Role '${req.user.role}' is not authorized to access this resource`));
     }
 
@@ -42,11 +45,13 @@ export function requireApproved(req: AuthenticatedRequest, _res: Response, next:
     return next(ApiError.unauthorized());
   }
 
-  if (req.user.role === UserRole.SUPER_SELLER && req.user.status !== UserStatus.APPROVED) {
+  const isApprovedOrActive = req.user.status === UserStatus.APPROVED || req.user.status === UserStatus.ACTIVE;
+
+  if (req.user.role === UserRole.SUPER_SELLER && !isApprovedOrActive) {
     return next(
       ApiError.forbidden(
         req.user.status === UserStatus.PENDING_APPROVAL
-          ? 'Your Super Seller registration is pending System User approval.'
+          ? 'Your Super Seller registration is pending Super Admin approval.'
           : 'Your account has been rejected or suspended.'
       )
     );

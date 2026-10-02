@@ -13,6 +13,7 @@ export const registerSellerSchema = z.object({
   whatsappNumber: z.string().optional(),
   businessDocUrl: z.string().url().optional().or(z.literal('')),
   openingHours: z.string().optional(),
+  planType: z.string().optional().default('STANDARD_FREE'),
 });
 
 export const loginSchema = z.object({

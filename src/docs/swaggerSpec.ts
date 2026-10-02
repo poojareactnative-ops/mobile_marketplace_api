@@ -1,0 +1,1255 @@
+export const swaggerDocument = {
+  openapi: '3.0.0',
+  info: {
+    title: 'Hyperlocal Mobile Marketplace - REST API Specification',
+    version: '1.0.0',
+    description: `
+## Hyperlocal Mobile Marketplace Backend Architecture & REST API
+
+This API is designed directly from the frontend UI and multi-tier role hierarchy to power hyperlocal mobile and accessories commerce, instant walk-in repair diagnostics, and zero-friction guest discovery.
+
+### 🏛️ Multi-Tier Role Hierarchy & Operational Responsibilities
+
+1. **Super Admin (Platform Owner)**
+   - Reviews and accepts/approves Super Seller registration requests.
+   - Future Paid Monetization (No Gateway): Manages listing tiers and manual verification.
+   - Platform-wide governance, shop activation, global categories, and traffic oversight.
+
+2. **Super Seller (Shop Owner)**
+   - Registers shop request (waits for Super Admin acceptance & activation).
+   - Creates and manages Admins (\`SELLER_ADMIN\`) for their shop.
+   - Manages product catalogue, inventory, promotional offers, and shop profile.
+
+3. **Admin / Seller Admin (Shop Staff / Manager)**
+   - Created & governed by the Super Seller.
+   - Manages store users: logs walk-in customers, customer repair history & complaints.
+   - Submits local customer repair problems, updates tickets, and handles customer leads.
+
+4. **Client User / Visitor (End Consumer)**
+   - 🌟 **NO REGISTRATION OR LOGIN REQUIRED AT ALL!**
+   - Discovers products & repair shops NEAREST to their live GPS location (Haversine geo-search).
+   - Initiates pre-filled WhatsApp enquiries directly to sellers with click-to-chat links.
+   - Books and tracks repair status online with simple Phone number or Ticket ID.
+
+---
+### ⚙️ Core Architectural Guarantees
+- **Integer Paise Financial Precision:** All product prices, listing fees, and repair quotes are integer paise (\`₹199.00\` = \`19900 paise\`).
+- **Zero-Friction Client Experience:** End consumers browse freely as guests without passwords or sign-up fatigue.
+- **Super Admin Approval Gate:** Super Sellers sit in \`PENDING_APPROVAL\` until reviewed by Super Admin.
+    `,
+    contact: {
+      name: 'Hyperlocal Mobile Marketplace Engineering Team',
+      email: 'support@hyperlocalmarketplace.internal',
+    },
+  },
+  servers: [
+    {
+      url: '/api/v1',
+      description: 'Default API Endpoint (v1)',
+    },
+    {
+      url: 'http://localhost:4000/api/v1',
+      description: 'Local Development Server',
+    },
+  ],
+  tags: [
+    {
+      name: '1. Authentication',
+      description: 'User registration, Super Seller onboarding submission, login, token refresh, and profile inspection.',
+    },
+    {
+      name: '2. Tier 1: Super Admin (Platform Owner)',
+      description: 'Review & approve/reject onboarding requests, future monetization subscription plans, and platform traffic oversight.',
+    },
+    {
+      name: '3. Tier 2: Super Seller (Shop Owner)',
+      description: 'Delegate store staff by creating Admins, manage inventory catalogue, discounts, and shop profile.',
+    },
+    {
+      name: '4. Tier 3: Seller Admin (Store Staff)',
+      description: 'Manage store walk-in customers, submit repair jobs, log diagnostic notes, and provide repair quotes.',
+    },
+    {
+      name: '5. Tier 4: Client User / Visitor (Zero Registration)',
+      description: 'Frictionless discovery: Haversine nearest products geo-search, nearby shops, direct WhatsApp lead enquiries.',
+    },
+    {
+      name: '6. Repair Services & Online Tracking',
+      description: 'Guest online repair booking (no login) and live milestone progress bar ticket tracking.',
+    },
+    {
+      name: '7. System & Analytics',
+      description: 'Platform analytics, visitor metrics, and landing page management.',
+    },
+  ],
+  components: {
+    securitySchemes: {
+      BearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Provide your JWT bearer token in the format: Bearer <token>',
+      },
+    },
+    schemas: {
+      ApiResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          message: { type: 'string', example: 'Operation completed successfully' },
+          data: { type: 'object' },
+        },
+      },
+      ApiError: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: false },
+          message: { type: 'string', example: 'Detailed error explanation' },
+          errors: { type: 'array', items: { type: 'string' } },
+        },
+      },
+      User: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: 'user-uuid-101' },
+          name: { type: 'string', example: 'Pooja Mourya' },
+          email: { type: 'string', example: 'pooja@poojamobile.com' },
+          phone: { type: 'string', example: '+91 98450 12345' },
+          role: {
+            type: 'string',
+            enum: ['SUPER_ADMIN', 'SUPER_SELLER', 'SELLER_ADMIN', 'CUSTOMER'],
+            example: 'SUPER_SELLER',
+          },
+          status: {
+            type: 'string',
+            enum: ['ACTIVE', 'PENDING_APPROVAL', 'SUSPENDED', 'REJECTED'],
+            example: 'ACTIVE',
+          },
+          shopId: { type: 'string', example: 'shop-uuid-001' },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      Shop: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: 'shop-uuid-001' },
+          ownerUserId: { type: 'string', example: 'user-uuid-101' },
+          name: { type: 'string', example: 'Pooja Mobile Hub' },
+          type: { type: 'string', enum: ['SUPER_SELLER', 'ACCESSORY_SELLER'], example: 'SUPER_SELLER' },
+          description: { type: 'string', example: 'Premier smartphone repair and authentic accessories store.' },
+          phone: { type: 'string', example: '+91 98450 12345' },
+          whatsappNumber: { type: 'string', example: '919845012345' },
+          address: { type: 'string', example: '12/4 Brigade Road, Bangalore' },
+          latitude: { type: 'number', example: 12.9716 },
+          longitude: { type: 'number', example: 77.5946 },
+          isActive: { type: 'boolean', example: true },
+          isVerified: { type: 'boolean', example: true },
+          openingHours: { type: 'string', example: '9:00 AM - 9:00 PM' },
+          rating: { type: 'number', example: 4.8 },
+          reviewCount: { type: 'integer', example: 124 },
+        },
+      },
+      Product: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: 'prod-101' },
+          shopId: { type: 'string', example: 'shop-uuid-001' },
+          categoryId: { type: 'string', example: 'cat-uuid-case' },
+          name: { type: 'string', example: 'iPhone 15 Matte Finish Shield Case' },
+          brand: { type: 'string', example: 'Spigen' },
+          sku: { type: 'string', example: 'SPG-IP15-MBL' },
+          conditionState: { type: 'string', example: 'New' },
+          warranty: { type: 'string', example: '6 Months Brand Warranty' },
+          pricePaise: { type: 'integer', description: 'Price in paise (₹899.00 = 89900)', example: 89900 },
+          compareAtPricePaise: { type: 'integer', example: 129900 },
+          discountPercent: { type: 'integer', example: 30 },
+          stock: { type: 'integer', example: 14 },
+          status: { type: 'string', enum: ['ACTIVE', 'DRAFT', 'OUT_OF_STOCK', 'ARCHIVED'], example: 'ACTIVE' },
+          description: { type: 'string', example: 'Military-grade shock absorption case with slim profile.' },
+          images: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                url: { type: 'string', example: 'https://images.unsplash.com/photo-1603302576837-37561b2e2302' },
+                altText: { type: 'string', example: 'Spigen Case Angle' },
+                position: { type: 'integer', example: 0 },
+              },
+            },
+          },
+        },
+      },
+      NearestProductItem: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: 'prod-101' },
+          name: { type: 'string', example: 'iPhone 15 Matte Finish Shield Case' },
+          brand: { type: 'string', example: 'Spigen' },
+          pricePaise: { type: 'integer', example: 89900 },
+          compareAtPricePaise: { type: 'integer', example: 129900 },
+          discountPercent: { type: 'integer', example: 30 },
+          stock: { type: 'integer', example: 14 },
+          conditionState: { type: 'string', example: 'New' },
+          warranty: { type: 'string', example: '6 Months Warranty' },
+          distanceMeters: { type: 'integer', description: 'Haversine distance from client location in meters', example: 420 },
+          shop: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: 'shop-uuid-001' },
+              name: { type: 'string', example: 'Pooja Mobile Hub' },
+              phone: { type: 'string', example: '+91 98450 12345' },
+              whatsappNumber: { type: 'string', example: '919845012345' },
+              isVerified: { type: 'boolean', example: true },
+              address: { type: 'string', example: '12/4 Brigade Road, Bangalore' },
+              distanceFormatted: { type: 'string', example: '420 m away' },
+            },
+          },
+        },
+      },
+      SuperSellerRequest: {
+        type: 'object',
+        properties: {
+          requestId: { type: 'string', example: 'req-uuid-001' },
+          status: { type: 'string', enum: ['PENDING', 'APPROVED', 'REJECTED'], example: 'PENDING' },
+          createdAt: { type: 'string', format: 'date-time' },
+          shop: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: 'shop-uuid-001' },
+              name: { type: 'string', example: 'Pooja Mobile Hub' },
+              type: { type: 'string', example: 'SUPER_SELLER' },
+              address: { type: 'string', example: '12/4 Brigade Road, Bangalore' },
+              latitude: { type: 'number', example: 12.9716 },
+              longitude: { type: 'number', example: 77.5946 },
+            },
+          },
+          applicant: {
+            type: 'object',
+            properties: {
+              userId: { type: 'string', example: 'user-uuid-101' },
+              name: { type: 'string', example: 'Pooja Mourya' },
+              email: { type: 'string', example: 'pooja@poojamobile.com' },
+              phone: { type: 'string', example: '+91 98450 12345' },
+            },
+          },
+          membership: {
+            type: 'object',
+            properties: {
+              planTier: { type: 'string', example: 'STARTER' },
+              feePaise: { type: 'integer', example: 99900 },
+              billingStatus: { type: 'string', example: 'MANUALLY_VERIFIED' },
+            },
+          },
+        },
+      },
+      SubscriptionPlan: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: 'plan-starter-monthly' },
+          code: { type: 'string', example: 'STARTER_MONTHLY' },
+          name: { type: 'string', example: 'Starter Super Seller' },
+          pricePaise: { type: 'integer', example: 99900 },
+          durationDays: { type: 'integer', example: 30 },
+          maxProducts: { type: 'integer', example: 100 },
+          maxAdmins: { type: 'integer', example: 3 },
+          featuresJson: {
+            type: 'object',
+            properties: {
+              priorityNearbyRanking: { type: 'boolean', example: true },
+              whatsappLeadAnalytics: { type: 'boolean', example: true },
+              verifiedBadgeIncluded: { type: 'boolean', example: true },
+            },
+          },
+          isActive: { type: 'boolean', example: true },
+        },
+      },
+      RepairJob: {
+        type: 'object',
+        properties: {
+          ticketId: { type: 'string', example: 'rep-uuid-9999' },
+          referenceNumber: { type: 'string', example: 'REP-9999' },
+          customerName: { type: 'string', example: 'Vijay Sundaram' },
+          customerPhone: { type: 'string', example: '9812345678' },
+          deviceId: { type: 'string', example: 'Apple iPhone 14 Pro' },
+          problemDescription: { type: 'string', example: 'Screen glass broken, digitizer functioning normally.' },
+          status: {
+            type: 'string',
+            enum: ['SUBMITTED', 'UNDER_REVIEW', 'QUOTED', 'APPROVED', 'IN_PROGRESS', 'READY', 'COMPLETED', 'CANCELLED', 'NOT_REPAIRABLE'],
+            example: 'UNDER_REVIEW',
+          },
+          estimatedCostPaise: { type: 'integer', example: 599900 },
+          shop: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: 'shop-uuid-001' },
+              name: { type: 'string', example: 'Pooja Mobile Hub' },
+            },
+          },
+        },
+      },
+    },
+  },
+  paths: {
+    // ------------------------------------------------------------------------
+    // 1. AUTHENTICATION
+    // ------------------------------------------------------------------------
+    '/auth/register-super-seller': {
+      post: {
+        tags: ['1. Authentication'],
+        summary: 'Super Seller Registration & Onboarding Request',
+        description:
+          'Submits a Super Seller registration request. Creates a pending account and shop for Super Admin review. No payment gateway involved.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'email', 'phone', 'password', 'shopName', 'shopType', 'address'],
+                properties: {
+                  name: { type: 'string', example: 'Pooja Mourya' },
+                  email: { type: 'string', example: 'pooja@poojamobile.com' },
+                  password: { type: 'string', example: 'StrongSecurePassword123!' },
+                  phone: { type: 'string', example: '+91 98450 12345' },
+                  shopName: { type: 'string', example: 'Pooja Mobile Hub' },
+                  shopType: { type: 'string', example: 'SUPER_SELLER' },
+                  address: { type: 'string', example: '12/4 Brigade Road, Bangalore' },
+                  latitude: { type: 'number', example: 12.9716 },
+                  longitude: { type: 'number', example: 77.5946 },
+                  whatsappNumber: { type: 'string', example: '919845012345' },
+                  businessDocUrl: { type: 'string', example: 'https://example.com/gst-cert.pdf' },
+                  openingHours: { type: 'string', example: '9:00 AM - 9:00 PM' },
+                  planType: { type: 'string', example: 'STARTER_MONTHLY' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Super Seller request submitted successfully in PENDING_APPROVAL status.',
+          },
+          409: { description: 'Email already registered.' },
+        },
+      },
+    },
+    '/auth/login': {
+      post: {
+        tags: ['1. Authentication'],
+        summary: 'Log in with Email and Password',
+        description: 'Authenticates a Super Admin, Super Seller, or Seller Admin and returns Access & Refresh JWT tokens.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['email', 'password'],
+                properties: {
+                  email: { type: 'string', example: 'superadmin@marketplace.internal' },
+                  password: { type: 'string', example: 'AdminSecurePass2026!' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Login successful with JWT access tokens and user profile.' },
+          401: { description: 'Invalid email or password.' },
+          403: { description: 'Account pending approval or suspended.' },
+        },
+      },
+    },
+    '/auth/refresh': {
+      post: {
+        tags: ['1. Authentication'],
+        summary: 'Refresh Access Token',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['refreshToken'],
+                properties: {
+                  refreshToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsIn...' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'New access token issued.' },
+          401: { description: 'Invalid or expired refresh token.' },
+        },
+      },
+    },
+    '/auth/me': {
+      get: {
+        tags: ['1. Authentication'],
+        summary: 'Get Current Authenticated User Profile & Shop',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: { description: 'Current user profile with shop and application status.' },
+          401: { description: 'Unauthorized.' },
+        },
+      },
+    },
+
+    // ------------------------------------------------------------------------
+    // 2. TIER 1: SUPER ADMIN
+    // ------------------------------------------------------------------------
+    '/super-admin/requests': {
+      get: {
+        tags: ['2. Tier 1: Super Admin (Platform Owner)'],
+        summary: 'List Super Seller Onboarding Requests',
+        description: 'Lists all pending, approved, or rejected shop registration requests with membership tier data.',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: 'status', in: 'query', schema: { type: 'string', enum: ['PENDING', 'APPROVED', 'REJECTED'] }, description: 'Filter by approval status' },
+          { name: 'billingStatus', in: 'query', schema: { type: 'string', enum: ['FREE_TIER', 'MANUALLY_VERIFIED', 'PENDING_APPROVAL', 'EXEMPT'] } },
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+        ],
+        responses: {
+          200: {
+            description: 'List of Super Seller onboarding requests.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/SuperSellerRequest' } },
+                    meta: {
+                      type: 'object',
+                      properties: {
+                        totalPending: { type: 'integer', example: 4 },
+                        totalApproved: { type: 'integer', example: 38 },
+                        total: { type: 'integer', example: 42 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          403: { description: 'Forbidden. Super Admin authorization required.' },
+        },
+      },
+    },
+    '/super-admin/requests/{requestId}/approve': {
+      patch: {
+        tags: ['2. Tier 1: Super Admin (Platform Owner)'],
+        summary: 'Accept & Approve Super Seller Request (Shop Activation)',
+        description:
+          'Approves a Super Seller request, activates user account, activates the storefront for nearby client searches, and grants the verified badge. No payment gateway needed.',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: 'requestId', in: 'path', required: true, schema: { type: 'string' }, example: 'req-uuid-001' },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  grantVerificationBadge: { type: 'boolean', default: true },
+                  planTier: { type: 'string', enum: ['STANDARD_FREE', 'STARTER', 'PRO', 'ENTERPRISE'], default: 'STARTER' },
+                  billingStatus: { type: 'string', enum: ['FREE_TIER', 'MANUALLY_VERIFIED', 'EXEMPT'], default: 'MANUALLY_VERIFIED' },
+                  adminNotes: { type: 'string', example: 'Physical storefront verified on Brigade Road. GST documents valid.' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Super Seller request successfully approved.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Super Seller request approved. Shop is now activated and live for nearby clients.' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        requestId: { type: 'string', example: 'req-uuid-001' },
+                        status: { type: 'string', example: 'APPROVED' },
+                        shopId: { type: 'string', example: 'shop-uuid-001' },
+                        isVerified: { type: 'boolean', example: true },
+                        isActive: { type: 'boolean', example: true },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          404: { description: 'Request not found.' },
+        },
+      },
+    },
+    '/super-admin/requests/{requestId}/reject': {
+      patch: {
+        tags: ['2. Tier 1: Super Admin (Platform Owner)'],
+        summary: 'Reject Super Seller Request',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: 'requestId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['rejectionReason'],
+                properties: {
+                  rejectionReason: { type: 'string', example: 'Address could not be verified. Please re-submit with valid business proof.' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Request rejected successfully.' },
+        },
+      },
+    },
+    '/super-admin/plans': {
+      get: {
+        tags: ['2. Tier 1: Super Admin (Platform Owner)'],
+        summary: 'List Subscription Plans (Monetization)',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'List of subscription plans available for Super Sellers.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/SubscriptionPlan' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        tags: ['2. Tier 1: Super Admin (Platform Owner)'],
+        summary: 'Create / Update Subscription Plan (Direct Admin Control)',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['code', 'name', 'pricePaise'],
+                properties: {
+                  code: { type: 'string', example: 'PRO_ANNUAL' },
+                  name: { type: 'string', example: 'Pro Annual Super Seller' },
+                  pricePaise: { type: 'integer', description: 'Price in paise (₹9,999.00 = 999900)', example: 999900 },
+                  durationDays: { type: 'integer', example: 365 },
+                  maxProducts: { type: 'integer', example: 500 },
+                  maxAdmins: { type: 'integer', example: 10 },
+                  featuresJson: {
+                    type: 'object',
+                    properties: {
+                      priorityNearbyRanking: { type: 'boolean', example: true },
+                      whatsappLeadAnalytics: { type: 'boolean', example: true },
+                      verifiedBadgeIncluded: { type: 'boolean', example: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'Plan created successfully.' },
+        },
+      },
+    },
+    '/super-admin/analytics': {
+      get: {
+        tags: ['2. Tier 1: Super Admin (Platform Owner)'],
+        summary: 'Platform-wide Traffic, Visitor & Lead Analytics',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: 'period', in: 'query', schema: { type: 'string', enum: ['24h', '7d', '30d', '90d', 'all'], default: '30d' } },
+        ],
+        responses: {
+          200: { description: 'Visitor and platform analytics.' },
+        },
+      },
+    },
+
+    // ------------------------------------------------------------------------
+    // 3. TIER 2: SUPER SELLER
+    // ------------------------------------------------------------------------
+    '/super-seller/admins': {
+      post: {
+        tags: ['3. Tier 2: Super Seller (Shop Owner)'],
+        summary: 'Create an Admin (SELLER_ADMIN) for this Shop',
+        description: 'Super Seller creates store staff / technicians with SELLER_ADMIN role.',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'email', 'password', 'phone'],
+                properties: {
+                  name: { type: 'string', example: 'Rajesh Kumar' },
+                  email: { type: 'string', example: 'rajesh@poojamobile.com' },
+                  password: { type: 'string', example: 'TempAdminPassword456!' },
+                  phone: { type: 'string', example: '+91 98765 43210' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Admin user created successfully for this shop.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Admin user created successfully for your shop.' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'string', example: 'admin-uuid-501' },
+                        name: { type: 'string', example: 'Rajesh Kumar' },
+                        email: { type: 'string', example: 'rajesh@poojamobile.com' },
+                        phone: { type: 'string', example: '+91 98765 43210' },
+                        role: { type: 'string', example: 'SELLER_ADMIN' },
+                        shopId: { type: 'string', example: 'shop-uuid-001' },
+                        status: { type: 'string', example: 'ACTIVE' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          409: { description: 'User with this email already exists.' },
+        },
+      },
+      get: {
+        tags: ['3. Tier 2: Super Seller (Shop Owner)'],
+        summary: 'List Store Admins for Current Shop',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: { description: 'List of store admins.' },
+        },
+      },
+    },
+    '/super-seller/admins/{adminId}': {
+      patch: {
+        tags: ['3. Tier 2: Super Seller (Shop Owner)'],
+        summary: 'Suspend or Reactivate Store Admin',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: 'adminId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['status'],
+                properties: {
+                  status: { type: 'string', enum: ['ACTIVE', 'SUSPENDED'], example: 'SUSPENDED' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Admin status updated successfully.' },
+        },
+      },
+      delete: {
+        tags: ['3. Tier 2: Super Seller (Shop Owner)'],
+        summary: 'Remove Store Admin from Shop',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: 'adminId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          200: { description: 'Admin removed successfully.' },
+        },
+      },
+    },
+    '/seller/dashboard': {
+      get: {
+        tags: ['3. Tier 2: Super Seller (Shop Owner)'],
+        summary: 'Shop Performance KPI & Dashboard Overview',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: { description: 'Shop metrics, inventory count, enquiries, and repair status breakdown.' },
+        },
+      },
+    },
+    '/seller/products': {
+      get: {
+        tags: ['3. Tier 2: Super Seller (Shop Owner)'],
+        summary: 'List Shop Catalog Products with Stock & Filters',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 10 } },
+          { name: 'search', in: 'query', schema: { type: 'string' } },
+          { name: 'status', in: 'query', schema: { type: 'string' } },
+          { name: 'categoryId', in: 'query', schema: { type: 'string' } },
+        ],
+        responses: {
+          200: { description: 'Paginated products list.' },
+        },
+      },
+      post: {
+        tags: ['3. Tier 2: Super Seller (Shop Owner)'],
+        summary: 'Add New Product to Shop Catalogue',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['categoryId', 'name', 'pricePaise'],
+                properties: {
+                  categoryId: { type: 'string', example: 'cat-uuid-case' },
+                  name: { type: 'string', example: 'iPhone 15 Matte Finish Shield Case' },
+                  brand: { type: 'string', example: 'Spigen' },
+                  sku: { type: 'string', example: 'SPG-IP15-MBL' },
+                  modelCompatibility: { type: 'string', example: 'iPhone 15' },
+                  conditionState: { type: 'string', default: 'New' },
+                  warranty: { type: 'string', example: '6 Months Brand Warranty' },
+                  pricePaise: { type: 'integer', description: 'Price in paise (₹899.00 = 89900)', example: 89900 },
+                  compareAtPricePaise: { type: 'integer', example: 129900 },
+                  discountPercent: { type: 'integer', example: 30 },
+                  stock: { type: 'integer', example: 14 },
+                  status: { type: 'string', enum: ['ACTIVE', 'DRAFT', 'OUT_OF_STOCK'], default: 'ACTIVE' },
+                  description: { type: 'string', example: 'Durable matte finish case with responsive tactile buttons.' },
+                  images: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      required: ['url'],
+                      properties: {
+                        url: { type: 'string', example: 'https://images.unsplash.com/photo-1603302576837-37561b2e2302' },
+                        altText: { type: 'string', example: 'Shield Case Angle' },
+                        position: { type: 'integer', default: 0 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'Product created successfully.' },
+        },
+      },
+    },
+    '/seller/products/{productId}': {
+      get: {
+        tags: ['3. Tier 2: Super Seller (Shop Owner)'],
+        summary: 'Get Product Details by ID',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'productId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Product details.' } },
+      },
+      patch: {
+        tags: ['3. Tier 2: Super Seller (Shop Owner)'],
+        summary: 'Update Product Details',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'productId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Product updated.' } },
+      },
+      delete: {
+        tags: ['3. Tier 2: Super Seller (Shop Owner)'],
+        summary: 'Delete Product from Catalogue',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'productId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Product deleted.' } },
+      },
+    },
+    '/seller/shop': {
+      get: {
+        tags: ['3. Tier 2: Super Seller (Shop Owner)'],
+        summary: 'Get Storefront Profile',
+        security: [{ BearerAuth: [] }],
+        responses: { 200: { description: 'Store details.' } },
+      },
+      patch: {
+        tags: ['3. Tier 2: Super Seller (Shop Owner)'],
+        summary: 'Update Storefront Profile, WhatsApp Number & Location Coordinates',
+        security: [{ BearerAuth: [] }],
+        responses: { 200: { description: 'Store profile updated.' } },
+      },
+    },
+    '/seller/enquiries': {
+      get: {
+        tags: ['3. Tier 2: Super Seller (Shop Owner)'],
+        summary: 'List WhatsApp Lead Enquiries for Shop',
+        security: [{ BearerAuth: [] }],
+        responses: { 200: { description: 'WhatsApp enquiries list.' } },
+      },
+    },
+
+    // ------------------------------------------------------------------------
+    // 4. TIER 3: SELLER ADMIN
+    // ------------------------------------------------------------------------
+    '/seller/admin/customers': {
+      get: {
+        tags: ['4. Tier 3: Seller Admin (Store Staff)'],
+        summary: 'List Walk-In Local Customers',
+        description: 'Returns walk-in customers logged under this store.',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: 'search', in: 'query', schema: { type: 'string' }, description: 'Search by customer name, phone, or email' },
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+        ],
+        responses: {
+          200: { description: 'List of customers registered for this shop.' },
+        },
+      },
+      post: {
+        tags: ['4. Tier 3: Seller Admin (Store Staff)'],
+        summary: 'Log / Register Walk-In Local Customer',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'phone'],
+                properties: {
+                  name: { type: 'string', example: 'Vijay Sundaram' },
+                  phone: { type: 'string', example: '9812345678' },
+                  email: { type: 'string', example: 'vijay@example.com' },
+                  address: { type: 'string', example: 'MG Road, Bangalore' },
+                  notes: { type: 'string', example: 'Prefers OEM parts for iPhone 14 Pro' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'Customer logged successfully.' },
+        },
+      },
+    },
+    '/seller/admin/repair-jobs': {
+      post: {
+        tags: ['4. Tier 3: Seller Admin (Store Staff)'],
+        summary: 'Submit Local Repair Job for Customer Ticket',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['customerName', 'customerPhone', 'problemDescription'],
+                properties: {
+                  customerName: { type: 'string', example: 'Vijay Sundaram' },
+                  customerPhone: { type: 'string', example: '9812345678' },
+                  brand: { type: 'string', example: 'Apple iPhone' },
+                  model: { type: 'string', example: 'iPhone 14 Pro' },
+                  problemDescription: { type: 'string', example: 'Screen glass broken, digitizer functioning normally.' },
+                  estimatedCostPaise: { type: 'integer', description: 'Price in paise (₹5,999.00 = 599900)', example: 599900 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Repair ticket created.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        ticketId: { type: 'string', example: 'rep-uuid-9999' },
+                        referenceNumber: { type: 'string', example: 'REP-9999' },
+                        status: { type: 'string', example: 'UNDER_REVIEW' },
+                        estimatedCostPaise: { type: 'integer', example: 599900 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      get: {
+        tags: ['4. Tier 3: Seller Admin (Store Staff)'],
+        summary: 'List Store Repair Tickets',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: 'status', in: 'query', schema: { type: 'string' } },
+          { name: 'search', in: 'query', schema: { type: 'string' } },
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+        ],
+        responses: {
+          200: { description: 'Paginated list of repair tickets.' },
+        },
+      },
+    },
+    '/seller/admin/repair-jobs/{jobId}': {
+      get: {
+        tags: ['4. Tier 3: Seller Admin (Store Staff)'],
+        summary: 'Get Repair Ticket Details & Audit History',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'jobId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Repair job details with full updates trail.' } },
+      },
+      patch: {
+        tags: ['4. Tier 3: Seller Admin (Store Staff)'],
+        summary: 'Update Repair Diagnostic Status & Quote',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'jobId', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  status: {
+                    type: 'string',
+                    enum: ['SUBMITTED', 'UNDER_REVIEW', 'QUOTED', 'APPROVED', 'IN_PROGRESS', 'READY', 'COMPLETED', 'CANCELLED', 'NOT_REPAIRABLE'],
+                    example: 'IN_PROGRESS',
+                  },
+                  estimatedCostPaise: { type: 'integer', example: 599900 },
+                  note: { type: 'string', example: 'Original display panel arrived and being assembled.' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Repair ticket status and diagnostic notes updated.' },
+        },
+      },
+    },
+    '/seller/admin/repair-jobs/{jobId}/updates': {
+      post: {
+        tags: ['4. Tier 3: Seller Admin (Store Staff)'],
+        summary: 'Append Diagnostic Audit Note to Ticket',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'jobId', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['status', 'note'],
+                properties: {
+                  status: { type: 'string', example: 'IN_PROGRESS' },
+                  note: { type: 'string', example: 'Hardware diagnostics complete. Assembly in progress.' },
+                  estimatedCostPaise: { type: 'integer', example: 599900 },
+                },
+              },
+            },
+          },
+        },
+        responses: { 201: { description: 'Update logged.' } },
+      },
+    },
+
+    // ------------------------------------------------------------------------
+    // 5. TIER 4: CLIENT DISCOVERY (ZERO AUTH)
+    // ------------------------------------------------------------------------
+    '/public/products/nearest': {
+      get: {
+        tags: ['5. Tier 4: Client User / Visitor (Zero Registration)'],
+        summary: 'Nearest Product Discovery (Haversine Geo-Search)',
+        description:
+          'Finds products strictly ordered nearest-first from active and verified stores using spherical Haversine distance calculations. No login or signup required.',
+        parameters: [
+          { name: 'lat', in: 'query', required: true, schema: { type: 'number' }, example: 12.9716, description: 'Client live GPS latitude' },
+          { name: 'lng', in: 'query', required: true, schema: { type: 'number' }, example: 77.5946, description: 'Client live GPS longitude' },
+          { name: 'radiusMeters', in: 'query', schema: { type: 'integer', default: 2500, minimum: 500, maximum: 50000 }, description: 'Search radius in meters (500m to 10km)' },
+          { name: 'categoryId', in: 'query', schema: { type: 'string' }, description: 'Filter by category ID' },
+          { name: 'q', in: 'query', schema: { type: 'string' }, description: 'Search keyword by product name or brand' },
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 50 } },
+        ],
+        responses: {
+          200: {
+            description: 'Nearest products sorted nearest-first.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/NearestProductItem' },
+                    },
+                    meta: {
+                      type: 'object',
+                      properties: {
+                        page: { type: 'integer', example: 1 },
+                        limit: { type: 'integer', example: 50 },
+                        total: { type: 'integer', example: 8 },
+                        radiusMeters: { type: 'integer', example: 2500 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/shops/nearby': {
+      get: {
+        tags: ['5. Tier 4: Client User / Visitor (Zero Registration)'],
+        summary: 'Nearby Repair & Accessories Storefronts',
+        description: 'Returns nearest verified shops with live GPS coordinates, distance in meters/km, and top products.',
+        parameters: [
+          { name: 'lat', in: 'query', required: true, schema: { type: 'number' }, example: 12.9716 },
+          { name: 'lng', in: 'query', required: true, schema: { type: 'number' }, example: 77.5946 },
+          { name: 'radiusMeters', in: 'query', schema: { type: 'integer', default: 5000 } },
+          { name: 'search', in: 'query', schema: { type: 'string' } },
+        ],
+        responses: {
+          200: { description: 'Nearby shops list with computed distance.' },
+        },
+      },
+    },
+    '/enquiries': {
+      post: {
+        tags: ['5. Tier 4: Client User / Visitor (Zero Registration)'],
+        summary: 'Direct WhatsApp Enquiry (Zero-Auth Lead Generation)',
+        description: 'Initiates a pre-filled WhatsApp click-to-chat link directly to the store owner and logs the lead.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['shopId', 'customerName', 'customerPhone', 'message'],
+                properties: {
+                  shopId: { type: 'string', example: 'shop-uuid-001' },
+                  productId: { type: 'string', example: 'prod-101' },
+                  customerName: { type: 'string', example: 'Suresh Raina' },
+                  customerPhone: { type: 'string', example: '9888877777' },
+                  message: { type: 'string', example: 'Hi, do you have this in matte black color in stock today?' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Enquiry lead recorded and WhatsApp URL returned.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        enquiryId: { type: 'string', example: 'enq-909' },
+                        whatsappUrl: {
+                          type: 'string',
+                          example: 'https://wa.me/919845012345?text=Hi%20Pooja%20Mobile%20Hub%2C%20I%20am%20interested...',
+                        },
+                        status: { type: 'string', example: 'NEW' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/categories': {
+      get: {
+        tags: ['5. Tier 4: Client User / Visitor (Zero Registration)'],
+        summary: 'List Product and Repair Categories',
+        parameters: [{ name: 'type', in: 'query', schema: { type: 'string', enum: ['accessory', 'repair'] } }],
+        responses: { 200: { description: 'Categories list.' } },
+      },
+    },
+    '/shops/{shopId}': {
+      get: {
+        tags: ['5. Tier 4: Client User / Visitor (Zero Registration)'],
+        summary: 'Get Public Shop Details by ID',
+        parameters: [{ name: 'shopId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Shop information with active offers.' } },
+      },
+    },
+    '/shops/{shopId}/products': {
+      get: {
+        tags: ['5. Tier 4: Client User / Visitor (Zero Registration)'],
+        summary: 'Get Products for Specific Shop',
+        parameters: [
+          { name: 'shopId', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+          { name: 'search', in: 'query', schema: { type: 'string' } },
+        ],
+        responses: { 200: { description: 'Shop products list.' } },
+      },
+    },
+    '/products/featured': {
+      get: {
+        tags: ['5. Tier 4: Client User / Visitor (Zero Registration)'],
+        summary: 'Featured Products from Verified Stores',
+        responses: { 200: { description: 'Featured products list.' } },
+      },
+    },
+    '/public/landing-page': {
+      get: {
+        tags: ['5. Tier 4: Client User / Visitor (Zero Registration)'],
+        summary: 'Get Dynamic Landing Page Hero, Stats & Sections',
+        responses: { 200: { description: 'Landing page dynamic content.' } },
+      },
+    },
+
+    // ------------------------------------------------------------------------
+    // 6. REPAIR SERVICES & TRACKING
+    // ------------------------------------------------------------------------
+    '/public/repairs/book': {
+      post: {
+        tags: ['6. Repair Services & Online Tracking'],
+        summary: 'Guest Repair Booking (No Login Required)',
+        description: 'Enables any client to book a repair ticket without account creation or login fatigue.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['customerName', 'customerPhone', 'brand', 'model', 'problemDescription'],
+                properties: {
+                  customerName: { type: 'string', example: 'Suresh Raina' },
+                  customerPhone: { type: 'string', example: '9888877777' },
+                  customerEmail: { type: 'string', example: 'suresh@example.com' },
+                  brand: { type: 'string', example: 'Samsung' },
+                  model: { type: 'string', example: 'Galaxy S23 Ultra' },
+                  problemDescription: { type: 'string', example: 'Battery draining fast after software update.' },
+                  preferredShopId: { type: 'string', example: 'shop-uuid-001' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Repair ticket generated.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        ticketId: { type: 'string', example: 'rep-uuid-8888' },
+                        referenceNumber: { type: 'string', example: 'REP-8888' },
+                        status: { type: 'string', example: 'SUBMITTED' },
+                        brand: { type: 'string', example: 'Samsung' },
+                        model: { type: 'string', example: 'Galaxy S23 Ultra' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/public/repairs/track': {
+      get: {
+        tags: ['6. Repair Services & Online Tracking'],
+        summary: 'Track Repair Status Online (Milestone Progress Bar)',
+        description:
+          'Live milestone progress tracking without login. Tracks step: SUBMITTED ➔ UNDER_REVIEW ➔ QUOTED ➔ APPROVED ➔ IN_PROGRESS ➔ READY ➔ COMPLETED.',
+        parameters: [
+          { name: 'ticketId', in: 'query', schema: { type: 'string' }, example: 'REP-8888', description: 'Ticket ID or Reference number' },
+          { name: 'phone', in: 'query', schema: { type: 'string' }, example: '9888877777', description: 'Customer phone number' },
+        ],
+        responses: {
+          200: {
+            description: 'Live milestone repair tracking status and cost estimate.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        ticketId: { type: 'string', example: 'rep-uuid-8888' },
+                        referenceNumber: { type: 'string', example: 'REP-8888' },
+                        customerName: { type: 'string', example: 'Suresh Raina' },
+                        status: { type: 'string', example: 'IN_PROGRESS' },
+                        currentMilestoneIndex: { type: 'integer', example: 4 },
+                        milestones: {
+                          type: 'array',
+                          items: {
+                            type: 'object',
+                            properties: {
+                              step: { type: 'integer', example: 1 },
+                              status: { type: 'string', example: 'SUBMITTED' },
+                              isCompleted: { type: 'boolean', example: true },
+                              isCurrent: { type: 'boolean', example: false },
+                            },
+                          },
+                        },
+                        estimatedCostPaise: { type: 'integer', example: 349900 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          404: { description: 'Ticket not found.' },
+        },
+      },
+    },
+  },
+};

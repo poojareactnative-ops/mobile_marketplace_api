@@ -7,6 +7,7 @@ import { authenticate } from '../middleware/auth.middleware';
 const router = Router();
 
 router.post('/register-seller', validateBody(registerSellerSchema), AuthController.registerSeller);
+router.post('/register-super-seller', validateBody(registerSellerSchema), AuthController.registerSeller);
 router.post('/login', validateBody(loginSchema), AuthController.login);
 router.post('/refresh', validateBody(refreshTokenSchema), AuthController.refresh);
 router.post('/logout', authenticate, AuthController.logout);

@@ -4,6 +4,7 @@ import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '.
 import { ApiError } from '../utils/apiError';
 import { RegisterSellerInput, LoginInput } from '../schemas/auth.schema';
 import { UserRole, UserStatus, ApplicationStatus } from '../types/enums';
+import { ShopAdminStore } from '../utils/shopAdminStore';
 
 export class AuthService {
   static async registerSeller(input: RegisterSellerInput) {
@@ -62,7 +63,7 @@ export class AuthService {
     });
 
     return {
-      message: 'Registration submitted successfully. Account pending System User approval.',
+      message: 'Registration submitted successfully. Account pending Super Admin approval.',
       user: {
         id: result.user.id,
         name: result.user.name,
@@ -106,7 +107,7 @@ export class AuthService {
 
     if (user.status === UserStatus.PENDING_APPROVAL) {
       throw ApiError.forbidden(
-        'Your Super Seller account registration is pending approval by a System User. Please wait for platform review.'
+        'Your Super Seller account registration is pending approval by Super Admin. Please wait for platform review.'
       );
     }
 
@@ -120,7 +121,13 @@ export class AuthService {
       throw ApiError.forbidden('Your account has been suspended. Please contact platform administration.');
     }
 
-    const primaryShop = user.shops[0];
+    let primaryShop = user.shops[0];
+    if (!primaryShop) {
+      const adminShopId = ShopAdminStore.getShopIdForAdmin(user.id);
+      if (adminShopId) {
+        primaryShop = (await prisma.shop.findUnique({ where: { id: adminShopId } })) as any;
+      }
+    }
 
     const tokenPayload = {
       userId: user.id,
@@ -168,7 +175,14 @@ export class AuthService {
         throw ApiError.unauthorized('User is no longer active');
       }
 
-      const primaryShop = user.shops[0];
+      let primaryShop = user.shops[0];
+      if (!primaryShop) {
+        const adminShopId = ShopAdminStore.getShopIdForAdmin(user.id);
+        if (adminShopId) {
+          primaryShop = (await prisma.shop.findUnique({ where: { id: adminShopId } })) as any;
+        }
+      }
+
       const tokenPayload = {
         userId: user.id,
         email: user.email,
@@ -202,7 +216,13 @@ export class AuthService {
       throw ApiError.notFound('User not found');
     }
 
-    const primaryShop = user.shops[0];
+    let primaryShop = user.shops[0];
+    if (!primaryShop) {
+      const adminShopId = ShopAdminStore.getShopIdForAdmin(user.id);
+      if (adminShopId) {
+        primaryShop = (await prisma.shop.findUnique({ where: { id: adminShopId } })) as any;
+      }
+    }
 
     return {
       id: user.id,
@@ -216,3 +236,4 @@ export class AuthService {
     };
   }
 }
+

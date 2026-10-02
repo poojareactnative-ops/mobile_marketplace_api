@@ -8,7 +8,7 @@ async function startServer() {
     console.log('Database connected successfully via Prisma');
 
     const server = app.listen(env.PORT, () => {
-      console.log(`🚀 EMP-API server running on http://localhost:${env.PORT}`);
+      console.log(`🚀 mobile_marketplace_api server running on http://localhost:${env.PORT}`);
       console.log(`📌 API Base Endpoint: http://localhost:${env.PORT}/api/v1`);
     });
 

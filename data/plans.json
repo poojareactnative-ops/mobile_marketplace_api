@@ -1,0 +1,51 @@
+[
+  {
+    "id": "plan-standard-free",
+    "code": "STANDARD_FREE",
+    "name": "Standard Free",
+    "pricePaise": 0,
+    "durationDays": 365,
+    "maxProducts": 25,
+    "maxAdmins": 1,
+    "featuresJson": {
+      "priorityNearbyRanking": false,
+      "whatsappLeadAnalytics": false,
+      "verifiedBadgeIncluded": false
+    },
+    "isActive": true,
+    "createdAt": "2026-10-01T18:32:42.745Z"
+  },
+  {
+    "id": "plan-starter-monthly",
+    "code": "STARTER_MONTHLY",
+    "name": "Starter Super Seller",
+    "pricePaise": 99900,
+    "durationDays": 30,
+    "maxProducts": 100,
+    "maxAdmins": 3,
+    "featuresJson": {
+      "priorityNearbyRanking": true,
+      "whatsappLeadAnalytics": true,
+      "verifiedBadgeIncluded": true
+    },
+    "isActive": true,
+    "createdAt": "2026-10-01T18:32:42.746Z"
+  },
+  {
+    "id": "plan-pro-annual",
+    "code": "PRO_ANNUAL",
+    "name": "Pro Annual Super Seller",
+    "pricePaise": 999900,
+    "durationDays": 365,
+    "maxProducts": 500,
+    "maxAdmins": 10,
+    "featuresJson": {
+      "priorityNearbyRanking": true,
+      "whatsappLeadAnalytics": true,
+      "verifiedBadgeIncluded": true,
+      "dedicatedAccountManager": true
+    },
+    "isActive": true,
+    "createdAt": "2026-10-01T18:32:42.746Z"
+  }
+]

@@ -1,21 +1,37 @@
 export enum UserRole {
-  SYSTEM_USER = 'SYSTEM_USER',
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  SYSTEM_USER = 'SYSTEM_USER', // Alias for SUPER_ADMIN for backwards compatibility
   SUPER_SELLER = 'SUPER_SELLER',
   SELLER_ADMIN = 'SELLER_ADMIN',
+  CUSTOMER = 'CUSTOMER',
 }
 
 export enum UserStatus {
   PENDING_APPROVAL = 'PENDING_APPROVAL',
   APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
   ACTIVE = 'ACTIVE',
   SUSPENDED = 'SUSPENDED',
+  REJECTED = 'REJECTED',
 }
 
 export enum ApplicationStatus {
   PENDING = 'PENDING',
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
+}
+
+export enum PlanTier {
+  STANDARD_FREE = 'STANDARD_FREE',
+  STARTER = 'STARTER',
+  PRO = 'PRO',
+  ENTERPRISE = 'ENTERPRISE',
+}
+
+export enum BillingStatus {
+  FREE_TIER = 'FREE_TIER',
+  PENDING_APPROVAL = 'PENDING_APPROVAL',
+  MANUALLY_VERIFIED = 'MANUALLY_VERIFIED',
+  EXEMPT = 'EXEMPT',
 }
 
 export enum RepairStatus {
@@ -28,4 +44,10 @@ export enum RepairStatus {
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
   NOT_REPAIRABLE = 'NOT_REPAIRABLE',
+}
+
+export enum DiscountType {
+  PERCENT = 'PERCENT',
+  FLAT = 'FLAT',
+  BOGO = 'BOGO',
 }

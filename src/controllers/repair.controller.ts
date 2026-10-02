@@ -42,7 +42,16 @@ export class RepairController {
       const shopId = RepairController.getShopId(req);
       const authorUserId = req.user!.userId;
       const data = await RepairService.createRepairJob(shopId, authorUserId, req.body);
-      return sendSuccess(res, data, 201);
+      const shortId = data.id.replace(/-/g, '').substring(0, 4).toUpperCase();
+      return res.status(201).json({
+        success: true,
+        data: {
+          ticketId: data.id,
+          referenceNumber: `REP-${shortId}`,
+          status: data.status,
+          estimatedCostPaise: data.estimatedCostPaise,
+        },
+      });
     } catch (error) {
       return next(error);
     }
@@ -93,6 +102,24 @@ export class RepairController {
       const authorUserId = req.user!.userId;
       const data = await RepairService.addRepairUpdate(shopId, jobId, authorUserId, req.body);
       return sendSuccess(res, data, 201);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  static async bookRepairGuest(req: any, res: Response, next: NextFunction) {
+    try {
+      const data = await RepairService.bookRepairGuest(req.body);
+      return sendSuccess(res, data, 201);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  static async trackRepairGuest(req: any, res: Response, next: NextFunction) {
+    try {
+      const data = await RepairService.trackRepairGuest(req.query as any);
+      return sendSuccess(res, data, 200);
     } catch (error) {
       return next(error);
     }

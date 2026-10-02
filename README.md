@@ -1,155 +1,139 @@
-# Node.js API: Dynamic Landing Page, Seller Dashboard, & System Admin Management
+# Hyperlocal Mobile Marketplace - Backend REST API & Swagger UI
 
-Production-ready Node.js REST API service built with **Node.js, TypeScript, Express, Prisma ORM, MySQL / MariaDB, and Zod validation**.
-
-It replaces static mock data, browser `localStorage`, and file-based JSON stores with a database repository model supporting System User traffic tracking, Super Seller registration approval queues, direct customer WhatsApp enquiries (no guest registration needed), seller dashboard analytics, and customer repair job workflows.
+Production-grade Node.js & TypeScript REST API service supporting the multi-tier hierarchy, Super Admin request approvals & future monetization, Super Seller store staff management, and frictionless zero-registration client discovery with live Swagger documentation.
 
 ---
 
-## 🛠 Tech Stack
+## 📖 Live Swagger (OpenAPI 3.0) Documentation
 
-- **Runtime & Language**: Node.js (v20+) + TypeScript
-- **Web Framework**: Express.js
-- **Database & ORM**: Prisma ORM (Configured with MySQL / MariaDB)
-- **Authentication**: JWT (`jsonwebtoken`) + Password Hashing (`bcryptjs`)
-- **Validation**: Zod with custom request body & query validation middleware
-- **Security & Privacy**: Helmet, CORS, Rate Limiting (`express-rate-limit`), SHA-256 IP Hashing for visitor privacy
-- **Testing**: Vitest + Supertest
+- **Interactive Swagger UI:** [http://localhost:4000/api-docs](http://localhost:4000/api-docs) (or `/docs`)
+- **Raw OpenAPI JSON Specification:** [http://localhost:4000/api-docs.json](http://localhost:4000/api-docs.json)
+- **API Base URL:** [http://localhost:4000/api/v1](http://localhost:4000/api/v1)
 
 ---
 
-## 🚀 Quick Start Guide
+## 🏛 Multi-Tier Role Hierarchy & Permissions
 
-### 1. Install Dependencies
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 1. SUPER ADMIN (Platform Owner)                        │
+│  • Reviews & accepts/approves Super Seller registration requests                       │
+│  • Future Paid Monetization (No Gateway): Manages listing tiers & manual verification  │
+│  • Platform-wide governance, shop activation, global categories, and traffic oversight │
+└───────────────────────────────────────────┬────────────────────────────────────────────┘
+                                            │ (Accepts / Approves Request)
+                                            ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                              2. SUPER SELLER (Shop Owner)                              │
+│  • Registers shop request (waits for Super Admin acceptance & activation)              │
+│  • Creates and manages Admins (Seller Admins / Store Managers) for their shop          │
+│  • Manages product catalogue, inventory, promotional offers, and shop profile          │
+│  • Reviews repair diagnostic solutions and tracks shop-level revenue                   │
+└───────────────────────────────────────────┬────────────────────────────────────────────┘
+                                            │ (Creates & Manages Admins)
+                                            ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                           3. ADMIN / SELLER ADMIN (Shop Staff / Manager)               │
+│  • Created & governed by the Super Seller                                              │
+│  • Manages store users: logs walk-in customers, customer repair history & complaints   │
+│  • Submits local customer repair problems, updates tickets, and handles customer leads  │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+
+                                            ▲
+                                            │ (Interacts via WhatsApp / In-Store)
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                        4. CLIENT USER / VISITOR (End Consumer)                         │
+│  ★ NO REGISTRATION OR LOGIN REQUIRED AT ALL!                                           │
+│  • Discovers products & repair shops NEAREST to their live GPS location (Haversine geo)│
+│  • Adjusts live proximity search radius (500m to 10km)                                 │
+│  • Initiates pre-filled WhatsApp enquiries directly to sellers                         │
+│  • Books and tracks repair status online with simple Phone / Ticket ID                 │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🛠 Key Architectural Guarantees
+
+1. **Zero-Friction Client Experience:** End consumers browse freely as guests without passwords, sign-ups, or verification barriers. They find products and shops strictly based on physical proximity (nearest first).
+2. **Super Admin Approval Gate (No Payment Gateway):** Super Sellers cannot access the system immediately upon registration. Their profile sits in a `PENDING_APPROVAL` queue. The Super Admin reviews the request, verifies shop details, assigns tier/status (e.g. Free or Manually Verified Paid Tier), and approves activation directly. **No external payment gateway (e.g., Razorpay, Stripe) is involved or required.**
+3. **Delegated Admin Management:** The Super Seller has full administrative capability over their shop staff (`SELLER_ADMIN`). They can create admin accounts, set credentials, grant permissions, and suspend or revoke them at will.
+4. **Local User/Customer Management by Admins:** Shop Admins manage their local customer base directly (recording customer walk-ins, phone numbers, repair histories, and service inquiries).
+5. **Integer Paise Financial Precision:** All product prices, listing fees, and repair quotes are integer paise (`₹199.00` = `19900 paise`).
+
+---
+
+## 📚 Endpoints Summary by Tier
+
+### 1. Authentication & Onboarding
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `POST` | `/api/v1/auth/register-super-seller` | Super Seller Onboarding Registration (Pending queue) | Public |
+| `POST` | `/api/v1/auth/login` | Login with Email & Password | Public |
+| `POST` | `/api/v1/auth/refresh` | Refresh Access Token | Public |
+| `GET` | `/api/v1/auth/me` | Current Authenticated Profile & Shop | Bearer |
+| `POST` | `/api/v1/auth/logout` | Revoke session | Bearer |
+
+### 2. Tier 1: Super Admin (Platform Owner)
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `GET` | `/api/v1/super-admin/requests` | List Pending Onboarding Requests | `SUPER_ADMIN` |
+| `PATCH` | `/api/v1/super-admin/requests/:id/approve` | Accept & Activate Super Seller & Storefront | `SUPER_ADMIN` |
+| `PATCH` | `/api/v1/super-admin/requests/:id/reject` | Reject Onboarding Request | `SUPER_ADMIN` |
+| `GET` | `/api/v1/super-admin/plans` | List Monetization Subscription Plans | `SUPER_ADMIN` |
+| `POST` | `/api/v1/super-admin/plans` | Create / Configure Listing Subscription Plan | `SUPER_ADMIN` |
+| `GET` | `/api/v1/super-admin/analytics` | Platform Traffic, Visitor & Lead Analytics | `SUPER_ADMIN` |
+
+### 3. Tier 2: Super Seller (Shop Owner)
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `POST` | `/api/v1/super-seller/admins` | Create Store Admin (`SELLER_ADMIN`) | `SUPER_SELLER` |
+| `GET` | `/api/v1/super-seller/admins` | List Store Admins for Current Shop | `SUPER_SELLER` |
+| `PATCH` | `/api/v1/super-seller/admins/:adminId` | Suspend or Reactivate Store Admin | `SUPER_SELLER` |
+| `DELETE`| `/api/v1/super-seller/admins/:adminId` | Remove Store Admin from Shop | `SUPER_SELLER` |
+| `GET` | `/api/v1/seller/dashboard` | Shop KPI Overview & Summary | `SUPER_SELLER`, `SELLER_ADMIN` |
+| `GET` | `/api/v1/seller/products` | Manage Catalog Inventory | `SUPER_SELLER`, `SELLER_ADMIN` |
+| `POST` | `/api/v1/seller/products` | Add New Product | `SUPER_SELLER`, `SELLER_ADMIN` |
+| `GET` | `/api/v1/seller/shop` | View Storefront Profile | `SUPER_SELLER`, `SELLER_ADMIN` |
+| `PATCH` | `/api/v1/seller/shop` | Update Store Details & WhatsApp Number | `SUPER_SELLER` |
+| `GET` | `/api/v1/seller/enquiries` | View WhatsApp Leads | `SUPER_SELLER`, `SELLER_ADMIN` |
+
+### 4. Tier 3: Seller Admin (Store Staff / Manager)
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `GET` | `/api/v1/seller/admin/customers` | List Store Walk-In Customers | `SELLER_ADMIN`, `SUPER_SELLER` |
+| `POST` | `/api/v1/seller/admin/customers` | Register / Log Walk-In Customer | `SELLER_ADMIN`, `SUPER_SELLER` |
+| `POST` | `/api/v1/seller/admin/repair-jobs` | Submit Customer Repair Job | `SELLER_ADMIN`, `SUPER_SELLER` |
+| `GET` | `/api/v1/seller/admin/repair-jobs` | List Store Repair Tickets | `SELLER_ADMIN`, `SUPER_SELLER` |
+| `GET` | `/api/v1/seller/admin/repair-jobs/:id` | Repair Ticket Details & Audit History | `SELLER_ADMIN`, `SUPER_SELLER` |
+| `PATCH` | `/api/v1/seller/admin/repair-jobs/:id` | Update Diagnostic Status & Repair Quote | `SELLER_ADMIN`, `SUPER_SELLER` |
+| `POST` | `/api/v1/seller/admin/repair-jobs/:id/updates` | Append Diagnostic Audit Note | `SELLER_ADMIN`, `SUPER_SELLER` |
+
+### 5. Tier 4: Client User / Visitor (Zero Registration Required)
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `GET` | `/api/v1/public/products/nearest` | **Haversine Geo-Search** (Nearest products first) | **None (Guest)** |
+| `GET` | `/api/v1/shops/nearby` | Proximity Nearby Stores Search | **None (Guest)** |
+| `POST` | `/api/v1/enquiries` | **Direct WhatsApp Enquiry** (Pre-filled URL lead) | **None (Guest)** |
+| `POST` | `/api/v1/public/repairs/book` | **Guest Online Repair Booking** | **None (Guest)** |
+| `GET` | `/api/v1/public/repairs/track` | **Live Milestone Progress Tracking** | **None (Guest)** |
+| `GET` | `/api/v1/public/landing-page` | Dynamic Landing Page Content & Stats | **None (Guest)** |
+| `GET` | `/api/v1/categories` | Catalog Categories | **None (Guest)** |
+| `GET` | `/api/v1/shops/:shopId` | Public Storefront Profile | **None (Guest)** |
+| `GET` | `/api/v1/shops/:shopId/products` | Public Products for Store | **None (Guest)** |
+| `GET` | `/api/v1/products/featured` | Curated Featured Products | **None (Guest)** |
+
+---
+
+## 🚀 Running the Project
 
 ```bash
+# 1. Install dependencies
 npm install
-```
 
-### 2. Setup Environment Variables
-
-Copy `.env.example` to `.env`:
-
-```bash
-cp .env.example .env
-```
-
-Default `.env` configuration:
-```env
-PORT=4000
-NODE_ENV=development
-DATABASE_URL="mysql://root:password@localhost:3306/hyperlocal_marketplace"
-JWT_SECRET=super_secret_jwt_key_emp_api_2026
-JWT_EXPIRES_IN=1d
-JWT_REFRESH_SECRET=super_secret_refresh_jwt_key_emp_api_2026
-JWT_REFRESH_EXPIRES_IN=7d
-CORS_ORIGIN=*
-```
-
-### 3. Initialize & Seed Database
-
-```bash
-npm run db:setup
-```
-
-Seeds default accounts:
-- **System User Admin**: `admin@platform.com` / `AdminPass123!`
-- **Approved Super Seller**: `seller@poojamobile.com` / `SellerPass123!`
-- **Pending Super Seller**: `pending@newshop.com` / `SellerPass123!`
-
-### 4. Run Development Server
-
-```bash
+# 2. Run dev server
 npm run dev
+
+# 3. Open Swagger UI
+open http://localhost:4000/api-docs
 ```
-
-Server runs at `http://localhost:4000`. Base API endpoint: `http://localhost:4000/api/v1`.
-
-### 5. Run Integration Tests
-
-```bash
-npm test
-```
-
----
-
-## 🔑 Roles & Authorization
-
-| Role | Access Level | Core Permissions |
-| --- | --- | --- |
-| **Normal User (Visitor / Customer)** | Unauthenticated / Guest | Browse published shops, products, categories; search nearby repair/accessory shops using Haversine calculation; generate formatted WhatsApp enquiry links directly to sellers. **No registration or login required.** |
-| **Super Seller** | Authenticated (Subject to System User approval) | Register shop application (`PENDING_APPROVAL`). Once approved by System User, manage shop profile, products, offers, WhatsApp enquiry leads, repair jobs, and view shop performance. |
-| **Seller Admin** | Authenticated | Create local customer repair records, manage customer entries, handle shop repair workflows. |
-| **System User (Platform Admin)** | Authenticated | Track visitor analytics ("how many users come" - page views, unique visitors, WhatsApp clicks, traffic charts); review and accept/approve or reject Super Seller registration applications; manage platform categories, shops, and landing page content. |
-
----
-
-## 📡 Key API Endpoints Reference
-
-### 1. Authentication Endpoints
-
-- `POST /api/v1/auth/register-seller`: Register a new Super Seller account & shop details. Account status defaults to `PENDING_APPROVAL`.
-- `POST /api/v1/auth/login`: Login for Super Sellers, Seller Admins, and System Users. Rejects `PENDING_APPROVAL` or `REJECTED` accounts with explanatory messages.
-- `POST /api/v1/auth/refresh`: Rotate access token using refresh token.
-- `POST /api/v1/auth/logout`: Revoke refresh token / clear session.
-- `GET /api/v1/auth/me`: Return active user details, role, shop profile, and application approval status.
-
-### 2. Normal User (Customer) Public Endpoints (No Auth Needed)
-
-- `GET /api/v1/public/landing-page`: Fetch landing hero, banners, featured categories, and stats.
-- `GET /api/v1/shops/nearby?lat=12.9716&lng=77.5946&radiusMeters=2500`: Fetch active and System-User verified nearby Super Sellers & accessory shops within radius (Haversine formula).
-- `GET /api/v1/products/featured?limit=8`: View top featured products.
-- `GET /api/v1/categories?type=accessory`: Browse categories.
-- `GET /api/v1/shops/:shopId`: View shop profile details and verified badge status.
-- `GET /api/v1/shops/:shopId/products`: Browse shop catalogue.
-- `POST /api/v1/enquiries/whatsapp`: Initiate a WhatsApp enquiry. Validates request, logs enquiry, increments shop lead count, and generates formatted WhatsApp web/app link (`https://wa.me/<whatsappNumber>?text=...`).
-- `POST /api/v1/analytics/track-visitor`: Log visitor traffic event (page view, shop visit, search) with SHA-256 hashed IP for System User analytics.
-
-### 3. System User Endpoints (Traffic Tracking & Super Seller Approvals)
-
-- `GET /api/v1/system/analytics/visitors?period=30d`: **Track user traffic:** Total site visits, unique visitors, daily visitor counts series, top visited shops, and WhatsApp enquiry conversion counts.
-- `GET /api/v1/system/seller-applications?status=PENDING`: **Super Seller Queue:** List all registered Super Seller applications awaiting review.
-- `GET /api/v1/system/seller-applications/:id`: View detailed application info and shop details.
-- `PATCH /api/v1/system/seller-applications/:id/approve`: **Accept Super Seller:** Approve application, update user status to `APPROVED`, set shop `isVerified = true` and `isActive = true`.
-- `PATCH /api/v1/system/seller-applications/:id/reject`: Reject application with reason, update status to `REJECTED`.
-- `GET /api/v1/system/shops`: Manage all platform shops (activate, suspend, verify).
-- `PATCH /api/v1/system/landing-page`: Update landing page sections, banners, and hero text.
-
-### 4. Dynamic Seller Dashboard (Approved Super Sellers)
-
-- `GET /api/v1/seller/dashboard?period=30d`: Aggregate dashboard summary (KPI cards, low stock alerts, WhatsApp enquiry count, repair statistics).
-- `GET /api/v1/seller/products`: Paginated product catalogue list for seller's shop.
-- `POST /api/v1/seller/products`: Add product with image gallery to seller shop.
-- `GET /api/v1/seller/products/:productId`: View single product details.
-- `PATCH /api/v1/seller/products/:productId`: Update product details/stock/status.
-- `DELETE /api/v1/seller/products/:productId`: Delete product.
-- `POST /api/v1/uploads/presign`: Obtain presigned upload URL for product images.
-- `GET /api/v1/seller/enquiries`: View logged WhatsApp enquiry leads received by shop.
-- `GET /api/v1/seller/shop`: View shop profile.
-- `PATCH /api/v1/seller/shop`: Update shop details, WhatsApp number, opening hours.
-
-### 5. Repair Workflow Endpoints
-
-- `POST /api/v1/seller/repair-customers`: Create customer entry.
-- `GET /api/v1/seller/repair-customers`: List repair customers.
-- `POST /api/v1/seller/repair-jobs`: Submit repair job (status default `SUBMITTED`).
-- `GET /api/v1/seller/repair-jobs`: List repair jobs with filters.
-- `GET /api/v1/seller/repair-jobs/:jobId`: View repair job detail + audit updates trail.
-- `PATCH /api/v1/seller/repair-jobs/:jobId`: Update repair job status / assignment / cost.
-- `POST /api/v1/seller/repair-jobs/:jobId/updates`: Add repair audit update note.
-
----
-
-## 📄 Data Schema Overview
-
-Monetary values use **integer paise** (e.g. `19900` = INR 199.00).
-
-- **User**: System Users, Super Sellers, Seller Admins. Status: `PENDING_APPROVAL`, `APPROVED`, `REJECTED`, `ACTIVE`, `SUSPENDED`.
-- **SuperSellerApplication**: Approval queue for System User review.
-- **Shop**: Seller profiles with location (`latitude`, `longitude`), `isVerified`, and `isActive`.
-- **Product & ProductImage**: Catalogue items managed by approved sellers.
-- **Category**: Product/repair categories managed by System Users.
-- **WhatsAppEnquiry**: Logged leads generated when guest users initiate WhatsApp enquiries.
-- **VisitorAnalytics**: Anonymized traffic logs tracking page views, searches, and WhatsApp clicks.
-- **RepairJob & RepairUpdate**: Customer repair orders with status audit trails.
-- **LandingPageSection**: Content management for public landing page.

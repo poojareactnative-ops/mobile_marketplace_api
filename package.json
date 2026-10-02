@@ -1,5 +1,5 @@
 {
-  "name": "emp-api",
+  "name": "mobile_marketplace_api",
   "version": "1.0.0",
   "description": "Dynamic Landing Page, Seller Dashboard, and System Admin Management Node.js REST API",
   "main": "dist/server.js",
@@ -18,6 +18,7 @@
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^5.20.0",
+    "@types/swagger-ui-express": "^4.1.8",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -25,6 +26,7 @@
     "express-rate-limit": "^7.4.0",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
+    "swagger-ui-express": "^5.0.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {

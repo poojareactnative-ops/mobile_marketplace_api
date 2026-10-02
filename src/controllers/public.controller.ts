@@ -78,6 +78,30 @@ export class PublicController {
     }
   }
 
+  static async createEnquiry(req: Request, res: Response, next: NextFunction) {
+    try {
+      const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip || '127.0.0.1';
+      const userAgent = req.headers['user-agent'];
+      const data = await PublicService.createEnquiryDirect(req.body, ipAddress, userAgent);
+      return sendSuccess(res, data, 201);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  static async getNearestProducts(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await PublicService.getNearestProducts(req.query as any);
+      return res.status(200).json({
+        success: true,
+        data: result.data,
+        meta: result.meta,
+      });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
   static async trackVisitor(req: Request, res: Response, next: NextFunction) {
     try {
       const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip || '127.0.0.1';
@@ -88,3 +112,4 @@ export class PublicController {
     }
   }
 }
+

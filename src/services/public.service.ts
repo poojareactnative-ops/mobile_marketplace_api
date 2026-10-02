@@ -286,4 +286,126 @@ export class PublicService {
 
     return { success: true };
   }
+
+  static async getNearestProducts(query: {
+    lat: number;
+    lng: number;
+    radiusMeters?: number;
+    categoryId?: string;
+    q?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const { lat, lng, radiusMeters = 2500, categoryId, q, page = 1, limit = 50 } = query;
+
+    const where: any = {
+      status: 'ACTIVE',
+      shop: {
+        isActive: true,
+        isVerified: true,
+      },
+    };
+
+    if (categoryId) {
+      where.categoryId = categoryId;
+    }
+
+    if (q) {
+      where.OR = [
+        { name: { contains: q } },
+        { brand: { contains: q } },
+        { description: { contains: q } },
+      ];
+    }
+
+    const products = await prisma.product.findMany({
+      where,
+      include: {
+        images: { orderBy: { position: 'asc' } },
+        category: true,
+        shop: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            whatsappNumber: true,
+            address: true,
+            latitude: true,
+            longitude: true,
+            isVerified: true,
+          },
+        },
+      },
+    });
+
+    const productsWithDistance = products
+      .map((p) => {
+        const distanceMeters = Math.round(
+          calculateDistanceMeters(lat, lng, p.shop.latitude, p.shop.longitude)
+        );
+        const distanceFormatted =
+          distanceMeters < 1000
+            ? `${distanceMeters} m away`
+            : `${(distanceMeters / 1000).toFixed(1)} km away`;
+
+        return {
+          id: p.id,
+          name: p.name,
+          brand: p.brand || 'Generic',
+          pricePaise: p.pricePaise,
+          compareAtPricePaise: p.compareAtPricePaise,
+          discountPercent:
+            p.compareAtPricePaise && p.compareAtPricePaise > p.pricePaise
+              ? Math.round(((p.compareAtPricePaise - p.pricePaise) / p.compareAtPricePaise) * 100)
+              : 0,
+          stock: p.stock,
+          conditionState: 'New',
+          warranty: '6 Months Warranty',
+          description: p.description,
+          images: p.images,
+          category: p.category,
+          distanceMeters,
+          shop: {
+            id: p.shop.id,
+            name: p.shop.name,
+            phone: p.shop.phone,
+            whatsappNumber: p.shop.whatsappNumber || p.shop.phone,
+            isVerified: p.shop.isVerified,
+            address: p.shop.address,
+            distanceFormatted,
+          },
+        };
+      })
+      .filter((p) => p.distanceMeters <= radiusMeters)
+      .sort((a, b) => {
+        if (a.distanceMeters !== b.distanceMeters) {
+          return a.distanceMeters - b.distanceMeters;
+        }
+        return b.stock - a.stock;
+      });
+
+    const total = productsWithDistance.length;
+    const startIndex = (page - 1) * limit;
+    const paginated = productsWithDistance.slice(startIndex, startIndex + limit);
+
+    return {
+      data: paginated,
+      meta: {
+        page,
+        limit,
+        total,
+        radiusMeters,
+        center: { lat, lng },
+      },
+    };
+  }
+
+  static async createEnquiryDirect(input: WhatsAppEnquiryInput, ipAddress: string, userAgent?: string) {
+    const res = await this.createWhatsAppEnquiry(input, ipAddress, userAgent);
+    return {
+      enquiryId: res.enquiryId,
+      whatsappUrl: res.whatsappUrl,
+      status: 'NEW',
+    };
+  }
 }

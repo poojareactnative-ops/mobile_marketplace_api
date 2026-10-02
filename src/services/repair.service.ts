@@ -68,7 +68,7 @@ export class RepairService {
           customerName: input.customerName,
           customerPhone: input.customerPhone,
           repairCustomerId,
-          deviceId: input.deviceId,
+          deviceId: input.deviceId || `${input.brand || 'Device'} ${input.model || ''}`.trim() || 'Unknown Device',
           problemDescription: input.problemDescription,
           status: RepairStatus.SUBMITTED,
           estimatedCostPaise: input.estimatedCostPaise,
@@ -227,5 +227,173 @@ export class RepairService {
     });
 
     return result;
+  }
+
+  static async bookRepairGuest(input: {
+    customerName: string;
+    customerPhone: string;
+    customerEmail?: string;
+    brand: string;
+    model: string;
+    problemDescription: string;
+    preferredShopId?: string;
+  }) {
+    let targetShopId = input.preferredShopId;
+
+    if (!targetShopId) {
+      const firstActiveShop = await prisma.shop.findFirst({
+        where: { isActive: true, isVerified: true },
+      });
+      if (!firstActiveShop) {
+        throw ApiError.badRequest('No active repair shop found for booking');
+      }
+      targetShopId = firstActiveShop.id;
+    }
+
+    const deviceId = `${input.brand} ${input.model}`.trim();
+
+    const job = await prisma.$transaction(async (tx) => {
+      let cust = await tx.repairCustomer.findFirst({
+        where: { shopId: targetShopId!, phone: input.customerPhone },
+      });
+
+      if (!cust) {
+        cust = await tx.repairCustomer.create({
+          data: {
+            shopId: targetShopId!,
+            name: input.customerName,
+            phone: input.customerPhone,
+            email: input.customerEmail || null,
+          },
+        });
+      }
+
+      const shop = await tx.shop.findUnique({ where: { id: targetShopId } });
+
+      const newJob = await tx.repairJob.create({
+        data: {
+          shopId: targetShopId!,
+          customerName: input.customerName,
+          customerPhone: input.customerPhone,
+          repairCustomerId: cust.id,
+          deviceId,
+          problemDescription: input.problemDescription,
+          status: RepairStatus.SUBMITTED,
+        },
+      });
+
+      // Find shop owner or admin for audit note author
+      const authorId = shop?.ownerUserId;
+      if (authorId) {
+        await tx.repairUpdate.create({
+          data: {
+            repairJobId: newJob.id,
+            authorUserId: authorId,
+            status: RepairStatus.SUBMITTED,
+            note: 'Guest repair booking initiated online via client discovery.',
+          },
+        });
+      }
+
+      return newJob;
+    });
+
+    const shortId = job.id.replace(/-/g, '').substring(0, 6).toUpperCase();
+    const referenceNumber = `REP-${shortId}`;
+
+    return {
+      ticketId: job.id,
+      referenceNumber,
+      status: job.status,
+      brand: input.brand,
+      model: input.model,
+      problemDescription: job.problemDescription,
+      shopId: targetShopId,
+      createdAt: job.createdAt,
+      message: 'Repair job submitted successfully. Please show this Ticket ID at the store.',
+    };
+  }
+
+  static async trackRepairGuest(query: { ticketId?: string; phone?: string }) {
+    if (!query.ticketId && !query.phone) {
+      throw ApiError.badRequest('Either ticketId or phone parameter is required to track a repair');
+    }
+
+    const where: any = {};
+    if (query.ticketId) {
+      // Support exact UUID or REP- prefix
+      const cleanId = query.ticketId.replace(/^REP-/i, '');
+      where.OR = [
+        { id: query.ticketId },
+        { id: { startsWith: cleanId.toLowerCase() } },
+      ];
+    } else if (query.phone) {
+      where.customerPhone = query.phone;
+    }
+
+    const job = await prisma.repairJob.findFirst({
+      where,
+      include: {
+        shop: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            whatsappNumber: true,
+            address: true,
+          },
+        },
+        updates: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            status: true,
+            note: true,
+            estimatedCostPaise: true,
+            createdAt: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!job) {
+      throw ApiError.notFound('No repair job found matching the specified Ticket ID or phone number');
+    }
+
+    const milestones = [
+      RepairStatus.SUBMITTED,
+      RepairStatus.UNDER_REVIEW,
+      RepairStatus.QUOTED,
+      RepairStatus.APPROVED,
+      RepairStatus.IN_PROGRESS,
+      RepairStatus.READY,
+      RepairStatus.COMPLETED,
+    ];
+
+    const currentMilestoneIndex = milestones.indexOf(job.status as RepairStatus);
+    const shortId = job.id.replace(/-/g, '').substring(0, 6).toUpperCase();
+
+    return {
+      ticketId: job.id,
+      referenceNumber: `REP-${shortId}`,
+      customerName: job.customerName,
+      customerPhone: job.customerPhone,
+      deviceId: job.deviceId,
+      problemDescription: job.problemDescription,
+      status: job.status,
+      currentMilestoneIndex: currentMilestoneIndex >= 0 ? currentMilestoneIndex : 0,
+      milestones: milestones.map((m, idx) => ({
+        step: idx + 1,
+        status: m,
+        isCompleted: currentMilestoneIndex >= 0 && idx <= currentMilestoneIndex,
+        isCurrent: currentMilestoneIndex === idx,
+      })),
+      estimatedCostPaise: job.estimatedCostPaise,
+      shop: job.shop,
+      updates: job.updates,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
+    };
   }
 }
